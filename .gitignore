@@ -1,4 +1,11 @@
+## Julia files
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
 deps/deps.jl
+
+## Custom folder
+do_not_track
+
+## MacOS
+.DS_Store
