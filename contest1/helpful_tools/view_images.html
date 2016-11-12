@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css">
+<script
+  src="https://code.jquery.com/jquery-3.1.1.min.js"
+  integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
+  crossorigin="anonymous"></script>
+<script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+<style>
+img{
+  width: 40px;
+  height: auto;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <h3>Update Base Path</h3>
+        <div class="col-md-12">
+        <p>
+        Start up a local file server with the base directory containg <code>trainLabels.csv</code> and the images in <code>train</code> directory.<br/>
+        You can install a local file server using <code>npm install -g http-server</code> or using <a href="https://chrome.google.com/webstore/detail/web-server-for-chrome/ofhbbkphhbklhfoeikjpcbhemlocgigb?hl=en">Web Server for Chrome</a>
+        </p>
+        <form>
+          <div class="form-group">
+            <label><code>trainLabels.csv</code> path: </label>
+            <input type="text" class="form-control" value="http://localhost:8080/trainLabels.csv" id="training_label_csv"/>
+          </div>
+         <div class="form-group">
+            <label>Training Images Directory:</label>
+            <input type="text" class="form-control" value="http://localhost:8080/train" id="training_image_dir"/>
+          </div>
+         <div class="form-group">
+            <label>Max Images to Display:</label>
+            <input type="number" class="form-control" value="100" min=1 max=5000 id="training_image_display_max"/>
+          </div>
+        <input type="button" class="btn-primary btn" value="Load Images from CSV" id="showImageBtn" 
+            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/plain"/>
+        </form>
+       </div>
+    </div>
+    <hr>
+    <div id="outputImages" class="row">
+        <h3>Training files</h3>
+        <div class="col-md-12">
+            <table id="imageTable" class="table table-striped"/>
+             <thead>
+              <tr>
+                <th>#</th>
+                <th>Image</th>
+                <th>Labeled Output</th>
+                <th>Predicted Label (not implemented)</th>
+              </tr>
+            </thead>
+             <tbody> </tbody>
+              </table>
+         </div>
+     </div>
+</div>
+<script>
+$(function(){
+    
+    var userOptions = function(){
+        return {
+            imageDir : $("#training_image_dir").val(),
+            labelcsv : $('#training_label_csv').val(),
+            maxImages : parseInt($('#training_image_display_max').val(), 10)
+        };
+    };
+    var createRow = function(i, imagePath, label){
+        return $("<tr>")
+            .append($("<td>").text(i)) 
+            .append($("<td>").html( $("<img>").attr({
+                'src':imagePath,
+                'title': imagePath
+            })))
+            .append($("<td>").text(label))
+            .append($("<td>").text('N/A'));
+    };
+    var loadImages = function(image_path, imageInfos){
+        console.log('Loading images');
+        var $table = $('#imageTable');
+        $table.find("td").remove();
+        imageInfos.forEach(function(img, i){
+            $table.append( createRow(i+1, `${image_path}/${img.filename}.bmp`, img.label || "?" ) );
+        });
+        $("#outputImages").show();
+    };
+    var loadTrainingCSV = function(url, maxImages){
+        $("#outputImages").hide();
+        return $.get(url).then(function(text){
+            return text.split(/\r\n|\n/).splice(0, 1 + maxImages);
+        });
+    };
+    var loadTrainingImages = function(rows){
+        return new Promise(function(resolve, reject){
+            if(!Array.isArray(rows) || rows.length == 0){
+                reject("No data");
+            }
+            rows.shift(); // from the header
+            var imageInfos = rows.map(function(row){
+                var col = row.split(",");
+               return {
+                    filename: (col[0] || '').trim(),
+                    label: col[1]
+               }; 
+            });
+            var opts = userOptions();
+            loadImages(opts.imageDir, imageInfos);
+            resolve(imageInfos); 
+        });
+    };
+    $("#showImageBtn").click(function(){
+        var opts = userOptions();
+        loadTrainingCSV(opts.labelcsv, opts.maxImages).then(function(data){
+            return loadTrainingImages(data);
+        }).catch(function(e){
+            alert('Unable to load CSV.', e); 
+        });
+    });
+
+});
+</script>
+</body>
+</html>
